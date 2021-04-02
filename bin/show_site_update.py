@@ -3,11 +3,18 @@
 This parses the sitemap to see what the relative ages are for the website
 """
 
+import sys
+import os
 import datetime
 import requests
 import xmltodict
 
-SITE_MAP = "https://help.sumologic.com/sitemap.xml"
+targeturl = 'help.sumologic.com'
+if len(sys.argv) > 1:
+    targeturl = sys.argv[1]
+
+BASE_URL = 'https://' + targeturl
+SITE_MAP = 'https://' + targeturl + '/' + 'sitemap.xml'
 
 my_xml = requests.get(SITE_MAP).text
 
@@ -19,7 +26,9 @@ today_date = datetime.date(int(TD[0]), int(TD[1]), int(TD[2]))
 my_dict = xmltodict.parse(my_xml)
 
 for url in my_dict['urlset']['url']:
-    location = url['loc']
+    fullurl = url['loc']
+    fullpath = fullurl.replace(BASE_URL,'')
+    dirname, filename = os.path.split(fullpath)
     lastmod = url['lastmod']
     frequency = url['changefreq']
 
@@ -28,4 +37,4 @@ for url in my_dict['urlset']['url']:
 
     date_delta = today_date - modify_date
     age = date_delta.days
-    print('{},{},{},{}'.format(lastmod, age, frequency, location))
+    print('{},{},{},{},{},{}'.format(lastmod, age, frequency, filename, fullpath, fullurl))
