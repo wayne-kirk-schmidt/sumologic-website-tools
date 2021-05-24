@@ -2,34 +2,41 @@
 # -*- coding: UTF-8 -*-
 
 """
-This parses the sitemap to see what the relative ages are for the website
+This creates a quick comparison of URL to see what s closest match
 """
 
-import re
-import sys
-import os
-import time
 import datetime
-import requests
-import xmltodict
 import hashlib
 import urllib
-import yaml
+import collections
+import textdistance
+import requests
+import xmltodict
+import pprint
+import time
+import sys
+import os
 
-targetsitelist = [ 'help.sumologic.com', 'help.sumologic.jp' ]
+
+sitemap = collections.defaultdict(dict)
+sitemap['en'] = 'help.sumologic.com'
+sitemap['jp'] = 'help.sumologic.jp'
+
 nowdate = datetime.datetime.today()
 
-siteresults = dict ()
-sitesummary = dict ()
+website = collections.defaultdict(dict)
+actions = collections.Counter()
+uniques = collections.defaultdict(list)
 
-processing = 'summary'
-if ( len(sys.argv) > 1):
-    processing = sys.argv[1]
+AGE_LIMIT = 30
+DISTANCE_LIMIT = 10
+SIZE_LIMIT = .1
 
-for targetsite in targetsitelist:
-    baseurl = 'https://' + targetsite
-    sitemap = 'https://' + targetsite + '/' + 'sitemap.xml'
-    myxml = requests.get(sitemap).text
+for mykey, myvalue in sitemap.items():
+
+    baseurl = 'https://' + myvalue
+    sitexml = baseurl + '/' + 'sitemap.xml'
+    myxml = requests.get(sitexml).text
     dstamp = datetime.datetime.now().strftime('%Y%m%d')
     mydict = xmltodict.parse(myxml)
 
@@ -39,39 +46,49 @@ for targetsite in targetsitelist:
         changes = url['changefreq']
         parse_object = urllib.parse.urlparse(urlpath)
         netpath = parse_object.path
-        nethash = hashlib.md5(netpath.encode('utf-8')).hexdigest()
+        NET_HASH = hashlib.md5(netpath.encode('utf-8')).hexdigest()
         netsite = parse_object.netloc
         urldate = datetime.datetime.strptime(lastmod, "%Y-%m-%d")
-        timedelta = (nowdate - urldate).days
-        if nethash not in siteresults:
-            siteresults[nethash] = dict()
-        if targetsite not in siteresults[nethash]:
-            siteresults[nethash][targetsite] = dict()
-        siteresults[nethash][targetsite]['time'] = timedelta
-        siteresults[nethash][targetsite]['path'] = netpath
+        pathage = (nowdate - urldate).days
 
-sitesummary['complete_tally'] = 0
-sitesummary['common_pathnames'] = 0
-for targetsite in targetsitelist:
-    sitesummary[targetsite] = 0
+        if mykey not in website[NET_HASH]:
+            website[NET_HASH][mykey] = collections.defaultdict(dict)
 
-for hash in siteresults:
+        website[NET_HASH][mykey]['path'] = netpath
+        website[NET_HASH][mykey]['time'] = pathage
+        uniques[mykey].append(netpath)
 
-    mykey = siteresults[hash].keys()
-    mysite = (list(mykey)[0])
-    mypath = siteresults[hash][mysite]['path']
-    mytime = siteresults[hash][mysite]['time']
+for myhash in website:
+    mysitelist = list(website[myhash].keys())
+    mysitelen = len(mysitelist)
+    if mysitelen == 2:
+        site0 = mysitelist[0]
+        time0 = website[myhash][mysitelist[0]]['time']
+        path0 = website[myhash][mysitelist[0]]['path']
+        site1 = mysitelist[1]
+        time1 = website[myhash][mysitelist[1]]['time']
+        path1 = website[myhash][mysitelist[1]]['path']
+        timedelta = time1 - time0
 
-    sitesummary['complete_tally'] += 1
-
-    if (len(siteresults[hash]) == 2):
-        sitesummary['common_pathnames'] += 1
+        if timedelta < 0:
+            MY_STATUS = 'SAMEPATH:JPSITE:newer'
+        elif timedelta > AGE_LIMIT:
+            MY_STATUS = 'SAMEPATH:JPSITE:too_old'
+        else:
+            MY_STATUS = 'SAMEPATH:ALLSITES:path_in_sync'
     else:
-        sitesummary[mysite] += 1
+        site0 = mysitelist[0]
+        time0 = website[myhash][mysitelist[0]]['time']
+        path0 = website[myhash][mysitelist[0]]['path']
+        MY_STATUS = 'UNIQUEPATH:' + site0.upper() + 'SITE' + ':investigate_' + site0.upper()
+        for mytag in sitemap.keys():
+            if mytag != site0:
+                for targetpath in list(uniques[mytag]):
+                    distance = textdistance.damerau_levenshtein.distance(path0, targetpath)
+                    if distance < DISTANCE_LIMIT:
+                       if distance / len(path0) < SIZE_LIMIT:
+                           MY_STATUS = 'UNIQUEPATH:' + site0.upper() + 'SITE' + ':possible_url_fixup'
+    actions[MY_STATUS] += 1
 
-    if processing == 'details':
-        print('{},{},{}'.format(mysite, mytime, mypath))
-
-if processing == 'summary':
-    print(yaml.dump(sitesummary, default_flow_style=False))
-
+for mykey, myvalue in sorted(dict(actions).items()):
+    print('{%s}: {}'.format(mykey, myvalue))
