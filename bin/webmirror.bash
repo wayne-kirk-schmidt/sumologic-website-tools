@@ -1,23 +1,10 @@
 #!/usr/bin/env bash
 
-help_dir="help.sumologic.com"
-help_url="https://${help_dir}"
-sleep_time=5
-wget_options="--mirror --convert-links --adjust-extension --page-requisites --no-parent"
+help_site="help.sumologic.com"
+help_url="https://${help_site}"
+help_dir="/var/tmp"
 
-###
-### Expect this will take:
-###
-### 1) 2 hours
-### 2) 1.5 Gbytes
-### 3) moderate CPU impact
-###
-### 8,000 odd files
-### 5,000 odd directories
-###
+cd ${help_dir}
 
-echo $help_url | xargs -n 1 -P 4 wget "${wget_options}" -q &
-
-###
-### while 'true'; do du -sk ./$help_dir; sleep "${sleep_time}" ; done
-###
+options="--mirror --convert-links --adjust-extension --page-requisites --no-parent"
+echo ${help_site} | xargs -P 8 -I{} wget ${options} -P $help_dir/$help_site {}
