@@ -7,4 +7,4 @@ help_dir="/var/tmp"
 cd ${help_dir}
 
 options="--mirror --convert-links --adjust-extension --page-requisites --no-parent"
-echo ${help_site} | xargs -P 8 -I{} wget ${options} -P $help_dir/$help_site {}
+echo ${help_site} | xargs -P 12 -I{} wget ${options} -P $help_dir/$help_site {}
