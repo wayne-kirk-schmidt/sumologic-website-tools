@@ -91,4 +91,4 @@ for myhash in website:
     actions[MY_STATUS] += 1
 
 for mykey, myvalue in sorted(dict(actions).items()):
-    print('{%s}: {}'.format(mykey, myvalue))
+    print('{:40}\t{:10}'.format(mykey, myvalue))
