@@ -12,11 +12,6 @@ import collections
 import textdistance
 import requests
 import xmltodict
-import pprint
-import time
-import sys
-import os
-
 
 sitemap = collections.defaultdict(dict)
 sitemap['en'] = 'help.sumologic.com'
@@ -80,15 +75,16 @@ for myhash in website:
         site0 = mysitelist[0]
         time0 = website[myhash][mysitelist[0]]['time']
         path0 = website[myhash][mysitelist[0]]['path']
-        MY_STATUS = 'UNIQUEPATH:' + site0.upper() + 'SITE' + ':investigate_' + site0.upper()
+        MY_STATUS_BASE = 'UNIQUEPATH:' + site0.upper() + 'SITE'
+        MY_STATUS = MY_STATUS_BASE + ':investigate_' + site0.upper()
         for mytag in sitemap.keys():
             if mytag != site0:
                 for targetpath in list(uniques[mytag]):
                     distance = textdistance.damerau_levenshtein.distance(path0, targetpath)
                     if distance < DISTANCE_LIMIT:
-                       if distance / len(path0) < SIZE_LIMIT:
-                           MY_STATUS = 'UNIQUEPATH:' + site0.upper() + 'SITE' + ':possible_url_fixup'
+                        if distance / len(path0) < SIZE_LIMIT:
+                            MY_STATUS = MY_STATUS_BASE + ':possible_url_fixup'
     actions[MY_STATUS] += 1
 
 for mykey, myvalue in sorted(dict(actions).items()):
-    print('{:40}\t{:10}'.format(mykey, myvalue))
+    print(f'{mykey:40}\t{myvalue:10}')

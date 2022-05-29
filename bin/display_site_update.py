@@ -9,12 +9,12 @@ import datetime
 import requests
 import xmltodict
 
-targeturl = 'help.sumologic.com'
+SITEURL = 'help.sumologic.com'
 if len(sys.argv) > 1:
-    targeturl = sys.argv[1]
+    SITEURL = sys.argv[1]
 
-BASE_URL = 'https://' + targeturl
-SITE_MAP = 'https://' + targeturl + '/' + 'sitemap.xml'
+BASE_URL = 'https://' + SITEURL
+SITE_MAP = 'https://' + SITEURL + '/' + 'sitemap.xml'
 
 my_xml = requests.get(SITE_MAP).text
 
@@ -35,4 +35,4 @@ for url in my_dict['urlset']['url']:
     urldate = datetime.datetime.strptime(lastmod, "%Y-%m-%d")
     timedelta = (nowdate - urldate).days
 
-    print('{},{},{},{},{},{}'.format(lastmod, timedelta, frequency, filename, fullpath, fullurl))
+    print(f'{lastmod},{timedelta},{frequency},{filename},{fullpath},{fullurl}')
